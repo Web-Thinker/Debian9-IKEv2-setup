@@ -155,8 +155,6 @@ nano /etc/ipsec.secrets
 cat <<EOF > /etc/ipsec.secrets
 : RSA /etc/ipsec.d/private/privkey.pem
 ${VPNUSERNAME} : EAP \"${VPNPASSWORD}\"
-ts3bgv : EAP "ts3bgv321@"
-ts3sb : EAP "ts3sb321@"
 EOF
 
 systemctl start strongswan
