@@ -97,7 +97,6 @@ cat <<EOF > /etc/ipsec.conf
 # ipsec.conf - strongSwan IPsec configuration file
 
 config setup
-#    plutostart=no
     charondebug="ike 2, knl 3, cfg 0"
     uniqueids=never # allow multiple connection with per account
 
