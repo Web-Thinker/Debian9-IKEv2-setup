@@ -64,7 +64,7 @@ echo
 # cp /etc/letsencrypt/live/"${VPNHOST}"/fullchain.pem /etc/ipsec.d/certs/fullchain.pem
 # cp /etc/letsencrypt/live/"${VPNHOST}"/cert.pem /etc/ipsec.d/certs/cert.pem
 # cp /etc/letsencrypt/live/"${VPNHOST}"/privkey.pem /etc/ipsec.d/private/privkey.pem
-
+# Then I decided that it would be better to make symbolic links.
 ln -f -s "/etc/letsencrypt/live/${VPNHOST}/cert.pem"    /etc/ipsec.d/certs/cert.pem
 ln -f -s "/etc/letsencrypt/live/${VPNHOST}/privkey.pem" /etc/ipsec.d/private/privkey.pem
 ln -f -s "/etc/letsencrypt/live/${VPNHOST}/chain.pem"   /etc/ipsec.d/cacerts/chain.pem
