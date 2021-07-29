@@ -1,22 +1,24 @@
-#!/bin/sh -e
+#!/bin/bash -e
+
 # Sctipt for install VPN-server protocol IKEv2
-# Sctipt ver. 1.0
+# Sctipt ver. 1.2
 # Created by 2021-07-27
+# Updated  2021-07-29
 
 #if [ "$EUID" -ne 0 ]
-#then echo "Please run script as root"
-#  exit
+#then echo "Please run script as root"1  exit
 #fi
 
 #echo
 #echo "=== Start install VPN-server... ==="
 #echo
 
-function exit_badly {
+function exitBadly {
   echo "$1"
   exit 1
 }
-[[ $(id -u) -eq 0 ]] || exit_badly "Please re-run as root (e.g. sudo ./path/to/this/script)"
+
+[[ $(id -u) -eq 0 ]] || exitBadly "Please re-run as root (e.g. sudo ./path/to/this/script)"
 
 echo
 echo "=== Start install VPN-server... ==="
@@ -44,7 +46,7 @@ read -r -p "Email address for sysadmin (e.g. VasyaPup@example.com): " EMAILADRES
 echo "** Note: Please enter the domain name of the VPN server to set up the Let's Encrypt certificate. **"
 read -r -p "Domain name for VPN: " VPNHOST
 VPNHOSTIP=$(dig -4 +short "${VPNHOST}")
-[[ -n "${VPNHOSTIP}" ]] || exit_badly "Cannot resolve VPN hostname: aborting"
+[[ -n "${VPNHOSTIP}" ]] || exitBadly "Cannot resolve VPN hostname: aborting"
 
 if [[ "${IP}" != "${VPNHOSTIP}" ]]; then
   echo "Warning: ${VPNHOST} resolves to ${VPNHOSTIP}, not ${IP}"
@@ -64,6 +66,7 @@ echo
 # cp /etc/letsencrypt/live/"${VPNHOST}"/fullchain.pem /etc/ipsec.d/certs/fullchain.pem
 # cp /etc/letsencrypt/live/"${VPNHOST}"/cert.pem /etc/ipsec.d/certs/cert.pem
 # cp /etc/letsencrypt/live/"${VPNHOST}"/privkey.pem /etc/ipsec.d/private/privkey.pem
+
 # Then I decided that it would be better to make symbolic links.
 ln -f -s "/etc/letsencrypt/live/${VPNHOST}/cert.pem"    /etc/ipsec.d/certs/cert.pem
 ln -f -s "/etc/letsencrypt/live/${VPNHOST}/privkey.pem" /etc/ipsec.d/private/privkey.pem
@@ -92,14 +95,12 @@ Public DNS servers include:
 read -r -p "DNS servers for VPN users (default: 77.88.8.8,77.88.8.1): " VPNDNS
 VPNDNS=${VPNDNS:-'77.88.8.8,77.88.8.1'}
 
-nano /etc/ipsec.conf
+
 cat <<EOF > /etc/ipsec.conf
 # ipsec.conf - strongSwan IPsec configuration file
-
 config setup
     charondebug="ike 2, knl 3, cfg 0"
     uniqueids=never # allow multiple connection with per account
-
 conn %default
     compress=no
     type=tunnel
@@ -112,7 +113,6 @@ conn %default
     rekey=no
     fragmentation=yes
     forceencaps=yes
-
 #define new ipsec connection
 conn win-ios-droid
     left=%any
@@ -120,7 +120,6 @@ conn win-ios-droid
     leftcert=/etc/ipsec.d/certs/fullchain.pem
     leftid=${VPNHOST}
     leftsendcert=always
-
     right=%any
     rightid=%any
     rightsourceip=${VPNIPPOOL},${VPNIPPOOL6V}
@@ -129,7 +128,6 @@ conn win-ios-droid
     rightdns=${VPNDNS}
     eap_identity=%identity
     auto=add
-
 #conn ikev2-mschapv2
 #    leftauth=eap-mschapv2
 #    rightauth=eap-mschapv2
@@ -151,10 +149,11 @@ echo
 echo "Passwords didn't match -- please try again"
 done
 
-nano /etc/ipsec.secrets
 cat <<EOF > /etc/ipsec.secrets
 : RSA /etc/ipsec.d/private/privkey.pem
-${VPNUSERNAME} : EAP \"${VPNPASSWORD}\"
+${VPNUSERNAME} : EAP "${VPNPASSWORD}"
+
+include /var/lib/strongswan/ipsec.secrets.inc
 EOF
 
 systemctl start strongswan
@@ -164,7 +163,6 @@ echo
 echo "--- Configuration: general server settings ---"
 echo
 
-nano /etc/sysctl.conf
 cat <<EOF > /etc/sysctl.conf
 # Configuration forward for IKEv2-setup
 net.ipv4.ip_forward = 1
@@ -182,7 +180,6 @@ sysctl -p
 # https://www.strongswan.org/docs/LinuxKongress2009-strongswan.pdf
 # https://wiki.strongswan.org/projects/strongswan/wiki/ForwardingAndSplitTunneling
 # https://www.zeitgeist.se/2013/11/26/mtu-woes-in-ipsec-tunnels-how-to-fix/
-
 read -r -p "Desired SSH log-in port (default: 22): " SSHPORT
 SSHPORT=${SSHPORT:-22}
 
@@ -220,8 +217,6 @@ ip6tables -A INPUT -i lo -j ACCEPT
 ip6tables -A INPUT ! -i lo -d ::1/128 -j REJECT
 
 # Accepts all established inbound connections
-#iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
-
 iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
 iptables -A OUTPUT -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
 iptables -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
@@ -252,7 +247,6 @@ iptables -A INPUT -p udp -j ACCEPT
 ip6tables -A INPUT -p udp -j ACCEPT
 
 # Allow VPN routing
-
 iptables -t nat -A POSTROUTING -s "${VPNIPPOOL}" -o "${ETH0ORSIMILAR}" -m policy --dir out --pol ipsec -j ACCEPT
 iptables -t nat -A POSTROUTING -s "${VPNIPPOOL}" -o "${ETH0ORSIMILAR}" -j MASQUERADE
 ip6tables -t nat -A POSTROUTING -s "${VPNIPPOOL6V}" -o "${ETH0ORSIMILAR}" -m policy --dir out --pol ipsec -j ACCEPT
@@ -273,7 +267,6 @@ iptables -L -v -t mangle
 iptables -L -v -t nat
 
 iptables-save > /etc/firewall.conf
-nano /etc/network/if-up.d/iptables
 cat <<EOF > /etc/network/if-up.d/iptables
 #!/bin/sh
 iptables-restore < /etc/firewall.conf
