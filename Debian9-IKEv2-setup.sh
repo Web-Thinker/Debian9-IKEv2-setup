@@ -1,5 +1,6 @@
 #!/bin/bash -e
 # Sctipt for install VPN-server protocol IKEv2
+# Specifically for https://cpa.rip
 # Sctipt ver. 2.3
 # Created by 2021-07-27
 # Updated  2021-08-03
